@@ -451,6 +451,7 @@ function ArvanFlow(X_len_real, Y_len_real, X_lat_d, SB, FB, saved_filename, t, N
     save = true #true is on, false is off. Saves velocity, vorticity & rho. Not implemented yet
     use_GPU = true #switch between GPU and CPU
     use_LES = true #true is on, false is off
+    error = false #catch errors
 
 
     #saved_filename = "cylinder_test"
@@ -547,7 +548,6 @@ function ArvanFlow(X_len_real, Y_len_real, X_lat_d, SB, FB, saved_filename, t, N
             percentage_diff_kls = @sprintf "%.0f" (abs(kolmogorov_length_scale - c_h)/c_h)*100
             print("Kolmogorov length scale is ", percentage_diff_kls, "% smaller than the grid scale.\n")
         end
-        readline()
         X_len = X_len_real/c_h
         Y_len = Y_len_real/c_h
         print("Reynolds number: ", Int16(floor(Re)), "\n")
@@ -766,8 +766,8 @@ function ArvanFlow(X_len_real, Y_len_real, X_lat_d, SB, FB, saved_filename, t, N
         print(Int32(it), "\t \t", days, ":", hours, ":", minutes, "\t \t", F_neqerr_frmt, "\t \t", TKE_frmt, "\t \t", TI_frmt, "\n") # display values
         if isnan(F_neqerr)
             print("\nSimulation ended with exit code 1. Press any key to exit.") #catch error for crashed code
-            readline()
-            exit()
+            error = true
+            break()
         end
         ttemp = CUDA.@elapsed begin
         
@@ -884,13 +884,19 @@ function ArvanFlow(X_len_real, Y_len_real, X_lat_d, SB, FB, saved_filename, t, N
         
     end
     
-    print("Simulation complete!\n")
-    if save
-        print("Writing final files...\n")
-        save_object(saved_filename*"-F-endwrite.jld2" , Array(F))
-        save_object(saved_filename*"-TKE_time_history-endwrite.jld2" , Array(TKE_time_history))
-        save_object(saved_filename*"-TI_time_history-endwrite.jld2" , Array(TI_time_history))
-        print("Saved!\n")
+    if !error
+        print("Simulation complete!\n")
+        if save
+            print("Writing final files...\n")
+            save_object(saved_filename*"-F-endwrite.jld2" , Array(F))
+            save_object(saved_filename*"-TKE_time_history-endwrite.jld2" , Array(TKE_time_history))
+            save_object(saved_filename*"-TI_time_history-endwrite.jld2" , Array(TI_time_history))
+            print("Saved!\n")
+        end
+    else
+        print("Encountered an error. Saving TKE average as 1000 and TI average as 100")
+        TKE_av = 1000
+        TI_av = 100
     end
-    return TKE_av, TI_av
+    return TKE_av, TI_av, error
 end

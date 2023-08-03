@@ -573,8 +573,12 @@ function Vikasa()
         for i = 1:pop_size
             creature_length = 2 - calculate_creature_length(creatures[i]) #calculate creature length
             print("Running ArvanFlow for creature ", i, " in generation ", g, ".\n")
-            TKE, TI = ArvanFlow(X_len_real, Y_len_real, X_lat_d, SBs[i], FBs[i], "generation-"*string(g)*"-creature-"*string(i), t, Nt, tau, Re) #use arvanflow to calculate turbulent intensity
-            fitness[i] = (1/TI)*0.8 + creature_length*0.2 #calculate fitness
+            TKE, TI, error = ArvanFlow(X_len_real, Y_len_real, X_lat_d, SBs[i], FBs[i], "generation-"*string(g)*"-creature-"*string(i), t, Nt, tau, Re) #use arvanflow to calculate turbulent intensity
+            fitness[i] = (1/TI)*0.8E-4 + creature_length*0.2 #calculate fitness
+
+            if error 
+                print("This creature is no good! Skipping over to the next.")
+            end
         end
 
         
