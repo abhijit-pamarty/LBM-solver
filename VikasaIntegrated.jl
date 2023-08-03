@@ -577,6 +577,7 @@ function Vikasa()
             fitness[i] = (1/TI)*0.8E-4 + creature_length*0.2 #calculate fitness
 
             if error 
+                fitness[i] = 1E-5
                 print("This creature is no good! Skipping over to the next.")
             end
         end
