@@ -765,9 +765,9 @@ function ArvanFlow(X_len_real, Y_len_real, X_lat_d, SB, FB, saved_filename, t, N
         end
         print(Int32(it), "\t \t", days, ":", hours, ":", minutes, "\t \t", F_neqerr_frmt, "\t \t", TKE_frmt, "\t \t", TI_frmt, "\n") # display values
         if isnan(F_neqerr)
-            print("\nSimulation ended with exit code 1. Press any key to exit.") #catch error for crashed code
+            print("\nSimulation ended with exit code 1.") #catch error for crashed code
             error = true
-            break()
+            break
         end
         ttemp = CUDA.@elapsed begin
         
