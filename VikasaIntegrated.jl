@@ -7,6 +7,7 @@ using LinearAlgebra
 using Printf
 using CUDA
 using JLD2
+include("ArvanFlowIntegrated.jl")
 
 #generate a random floating point number
 function randfloat(a, b)
@@ -467,7 +468,7 @@ function generate_domain(creature, X_len_real, Y_len_real, X_lat_d, Y_lat_d, X_t
         SB[Ny_center:(Ny_center+10), i] .= 0
         SB[(Ny_center-10):(Ny_center), i] .= 0
         FB[Ny_center:(Ny_center+10), i] .= 1
-        FB[(Ny_center-10):(Ny_center), i] .= 0
+        FB[(Ny_center-10):(Ny_center), i] .= 1
     end
 
     
@@ -476,11 +477,14 @@ function generate_domain(creature, X_len_real, Y_len_real, X_lat_d, Y_lat_d, X_t
     
 end
 
-function main()
+function Vikasa()
 
     #global variables
-    show_creatures = true
+    show_creatures = false
     mutate_before_start = true
+    save = true
+    save_frequency = 1
+
 
     #optimization variables
     global_pop_size = 10                       #population size every generation
@@ -509,6 +513,11 @@ function main()
     SBs = [SB, SB, SB, SB, SB, SB, SB, SB, SB, SB]   #solid body meshes
     FBs = [SB, SB, SB, SB, SB, SB, SB, SB, SB, SB]   #fluid body meshes
 
+    #Simulation parameters 
+    t = 200
+    Nt = 20000
+    tau = 0.61
+    Re = 50
     t_array = [1.0,0.0,0.0,0.0,0.0]
     kill_count = 0
 
@@ -529,7 +538,7 @@ function main()
         genes = mutate(mutation_rate, mutation_value, X_start_point, Y_start_point, X_end_point, Y_end_point, genes, pop_size, "randreset")
     end
 
-    for i = 1:number_gen
+    for g = 1:number_gen
 
         #generate the domains
         for i = 1:pop_size
@@ -555,14 +564,17 @@ function main()
         t = mean(t_array[t_array .> 0])[1]
         ttemp = CUDA.@elapsed begin
         
-        days = Int32(floor(t*(number_gen-i)/86400))
-        hours = Int32(floor(t*(number_gen-i)/3600) - 24*days)
-        minutes = Int32(floor(t*(number_gen-i)/60) - 60*hours - 24*60*days) #calculate time in days, hours & minutes
+        days = Int32(floor(t*(number_gen-g)/86400))
+        hours = Int32(floor(t*(number_gen-g)/3600) - 24*days)
+        minutes = Int32(floor(t*(number_gen-g)/60) - 60*hours - 24*60*days) #calculate time in days, hours & minutes
 
-
+        
 
         for i = 1:pop_size
-            fitness[i] = 2 - calculate_creature_length(creatures[i])
+            creature_length = 2 - calculate_creature_length(creatures[i]) #calculate creature length
+            print("Running ArvanFlow for creature ", i, " in generation ", g, ".\n")
+            TKE, TI = ArvanFlow(X_len_real, Y_len_real, X_lat_d, SBs[i], FBs[i], "generation-"*string(g)*"-creature-"*string(i), t, Nt, tau, Re) #use arvanflow to calculate turbulent intensity
+            fitness[i] = (1/TI)*0.8 + creature_length*0.2 #calculate fitness
         end
 
         
@@ -575,13 +587,13 @@ function main()
         if minutes == 0 #make minutes 1 just before simulaation finishes
             minutes = 1
         end
-        if i%10 == 1
+        if g%10 == 1
             print("\nIteration \tTime \t \tAverage Fitness \tMaximum Fitness \tDeaths \n \n") #show headings every 10 iterations
         end
-        print(Int32(i), "\t \t", days, ":", hours, ":", minutes, "\t \t", average_fitness_frmt, "\t \t \t", maximum_fitness_frmt, "\t \t \t", kill_count, "\n") # display values
+        print(Int32(g), "\t \t", days, ":", hours, ":", minutes, "\t \t", average_fitness_frmt, "\t \t \t", maximum_fitness_frmt, "\t \t \t", kill_count, "\n") # display values
 
         if abs((average_fitness - maximum_fitness)/(maximum_fitness)) < convergence_parameter
-            print("solution has converged at fitness = ", maximum_fitness_frmt, " in ", i, " generations.\n")
+            print("solution has converged at fitness = ", maximum_fitness_frmt, " in ", g, " generations.\n")
             readline()
             exit()
         end
@@ -623,12 +635,29 @@ function main()
         genes = mutate(mutation_rate, mutation_value, X_start_point, Y_start_point, X_end_point, Y_end_point, genes, pop_size, "addsub")
         creatures, fitness = generate_creatures(X_start_point, Y_start_point, X_end_point, Y_end_point, genes, pop_size, Int32(floor(X_tube_start*X_lat_d)))
 
+        if save && (g%save_frequency == 0)
+            print("Saving...\n")
+            num_digits_max = ndigits(number_gen)
+            num_digits_iters = ndigits(g)
+            format_it = string(g)
+            format_it = lpad(format_it, num_digits_max - num_digits_iters, '0')
+            save_object(saved_filename*"-creatures-"*format_it*".jld2" , Array(creatures))
+            save_object(saved_filename*"-fitness-"*format_it*".jld2" , Array(fitness))
+            print("Saved!\n")
+        end
+
 
         end
         t_array = circshift(t_array, 1)
         t_array[1] = ttemp
+        print("Optimization complete!\n")
+        if save
+            print("Writing final files...\n")
+            save_object("creatures-endwrite.jld2" , Array(creatures))
+            save_object("fitness-endwrite.jld2" , Array(fitness))
+            print("Saved at the end!\n")
+        end
         
     end
-    readline()
 end
-main()
+Vikasa()
