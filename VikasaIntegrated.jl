@@ -655,14 +655,29 @@ function Vikasa()
         end
         t_array = circshift(t_array, 1)
         t_array[1] = ttemp
-        print("Optimization complete!\n")
-        if save
-            print("Writing final files...\n")
-            save_object("creatures-endwrite.jld2" , Array(creatures))
-            save_object("fitness-endwrite.jld2" , Array(fitness))
-            print("Saved at the end!\n")
-        end
         
+        
+    end
+
+    print("Optimization complete!\n")
+    if save
+        print("Writing final files...\n")
+        save_object("creatures-endwrite.jld2" , Array(creatures))
+        save_object("fitness-endwrite.jld2" , Array(fitness))
+        print("Saved at the end!\n")
+    end
+
+    print("We've reached the end. Showing creatures...\n")
+    for p = 1:pop_size
+        if p != pop_size
+            print("press any key to view the next creature.[creature ", p, " of ", pop_size,"]\n")
+        else
+            print("press any key to exit.[creature ", p, " of ", pop_size,"]\n")
+        end
+        plot_creature_curve(creatures[p])
+        heatmap(SBs[p], ylimits = (0,Ny), xlimits = (0,Nx), aspect_ratio = :equal, c= :ice)
+        gui()
+        readline()
     end
 end
 Vikasa()
