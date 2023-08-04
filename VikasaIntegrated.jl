@@ -600,7 +600,7 @@ function Vikasa()
         if abs((average_fitness - maximum_fitness)/(maximum_fitness)) < convergence_parameter
             print("solution has converged at fitness = ", maximum_fitness_frmt, " in ", g, " generations.\n")
             readline()
-            exit()
+            break
         end
 
         creatures, fitness, genes, pop_size, kill_count = kill_creatures(creatures, fitness, genes, kill_rate, pop_size)
@@ -646,8 +646,8 @@ function Vikasa()
             num_digits_iters = ndigits(g)
             format_it = string(g)
             format_it = lpad(format_it, num_digits_max - num_digits_iters, '0')
-            save_object(saved_filename*"-creatures-"*format_it*".jld2" , Array(creatures))
-            save_object(saved_filename*"-fitness-"*format_it*".jld2" , Array(fitness))
+            save_object("creatures-"*format_it*".jld2" , Array(creatures))
+            save_object("fitness-"*format_it*".jld2" , Array(fitness))
             print("Saved!\n")
         end
 
